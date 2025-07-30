@@ -3,6 +3,7 @@ using FluentValidation.AspNetCore;
 using InvenBank.API.Configuration;
 using InvenBank.API.Middleware;
 using InvenBank.API.Repositories.Implementations;
+using InvenBank.API.Repositories.Implementations.InvenBank.API.Repositories.Implementations;
 using InvenBank.API.Repositories.Interfaces;
 using InvenBank.API.Services;
 using InvenBank.API.Services.Implementations;
@@ -73,6 +74,9 @@ builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
+builder.Services.AddScoped<IProductSupplierService, ProductSupplierService>();
+builder.Services.AddScoped<IProductSupplierRepository, ProductSupplierRepository>();
+
 
 // Validators
 services.AddValidatorsFromAssemblyContaining<Program>();
