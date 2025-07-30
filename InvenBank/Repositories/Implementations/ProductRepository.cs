@@ -117,15 +117,16 @@ namespace InvenBank.API.Repositories.Implementations
                 FROM Products p
                 INNER JOIN Categories c ON p.CategoryId = c.Id
                 LEFT JOIN (
-                    SELECT 
-                        CategoryId,
-                        STUFF((SELECT ' > ' + Name 
-                              FROM Categories c2 
-                              WHERE c2.ParentId = c1.Id 
-                              FOR XML PATH('')), 1, 3, '') AS CategoryPath
-                    FROM Categories c1
-                    WHERE ParentId IS NULL
+                SELECT 
+                c1.Id AS CategoryId,
+                STUFF((SELECT ' > ' + c2.Name 
+                FROM Categories c2 
+                WHERE c2.ParentId = c1.Id 
+                FOR XML PATH('')), 1, 3, '') AS CategoryPath
+                FROM Categories c1
+                WHERE c1.ParentId IS NULL
                 ) pc ON c.Id = pc.CategoryId OR c.ParentId = pc.CategoryId
+
                 LEFT JOIN (
                     SELECT 
                         ProductId,
@@ -209,15 +210,16 @@ namespace InvenBank.API.Repositories.Implementations
                 FROM Products p
                 INNER JOIN Categories c ON p.CategoryId = c.Id
                 LEFT JOIN (
-                    SELECT 
-                        CategoryId,
-                        STUFF((SELECT ' > ' + Name 
-                              FROM Categories c2 
-                              WHERE c2.ParentId = c1.Id 
-                              FOR XML PATH('')), 1, 3, '') AS CategoryPath
-                    FROM Categories c1
-                    WHERE ParentId IS NULL
+                SELECT 
+                c1.Id AS CategoryId,
+                STUFF((SELECT ' > ' + c2.Name 
+                FROM Categories c2 
+                    WHERE c2.ParentId = c1.Id 
+                    FOR XML PATH('')), 1, 3, '') AS CategoryPath
+                FROM Categories c1
+                WHERE c1.ParentId IS NULL
                 ) pc ON c.Id = pc.CategoryId OR c.ParentId = pc.CategoryId
+
                 LEFT JOIN (
                     SELECT 
                         ProductId,
@@ -581,7 +583,7 @@ namespace InvenBank.API.Repositories.Implementations
 
                 var sql = $@"
                 SELECT 
-                    p.Id, p.Name, p.Description, p.SKU, p.ImageUrl, p.Brand,
+                    p.Id, p.Name, CAST(p.Description AS varchar(MAX)) AS Description, p.SKU, p.ImageUrl, p.Brand,
                     c.Name AS CategoryName,
                     MIN(ps.Price) AS MinPrice,
                     MAX(ps.Price) AS MaxPrice,
@@ -596,7 +598,7 @@ namespace InvenBank.API.Repositories.Implementations
                 INNER JOIN Categories c ON p.CategoryId = c.Id
                 LEFT JOIN ProductSuppliers ps ON p.Id = ps.ProductId AND ps.IsActive = 1
                 {whereClause}
-                GROUP BY p.Id, p.Name, p.Description, p.SKU, p.ImageUrl, p.Brand, c.Name
+                GROUP BY p.Id, p.Name, CAST(p.Description AS varchar(MAX)), p.SKU, p.ImageUrl, p.Brand, c.Name
                 ORDER BY p.Name";
 
                 var parameters = categoryId.HasValue ? new { CategoryId = categoryId.Value } : null;
