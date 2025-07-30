@@ -150,6 +150,32 @@ namespace InvenBank.API.Configuration
             CreateMap<Product, RelatedProductDto>()
                 .ForMember(dest => dest.MinPrice, opt => opt.Ignore())
                 .ForMember(dest => dest.IsAvailable, opt => opt.Ignore());
+
+            // Mapeo ProductSuppliers
+            CreateMap<ProductSupplier, ProductSupplierDto>()
+                .ForMember(dest => dest.ProductName, opt => opt.Ignore())
+                .ForMember(dest => dest.ProductSKU, opt => opt.Ignore())
+                .ForMember(dest => dest.SupplierName, opt => opt.Ignore())
+                .ReverseMap()
+                .ForMember(dest => dest.Product, opt => opt.Ignore())
+                .ForMember(dest => dest.Supplier, opt => opt.Ignore())
+                .ForMember(dest => dest.OrderDetails, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
+
+            CreateMap<CreateProductSupplierRequest, ProductSupplier>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
+
+            CreateMap<UpdateProductSupplierRequest, ProductSupplier>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.ProductId, opt => opt.Ignore())
+                .ForMember(dest => dest.SupplierId, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.IsActive, opt => opt.Ignore());
         }
 
         private void ConfigureOrderMappings()
