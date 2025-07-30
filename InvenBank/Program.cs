@@ -56,12 +56,25 @@ services.AddScoped<IPasswordHashService, PasswordHashService>();
 // AutoMapper
 services.AddAutoMapper(typeof(Program));
 
-services.AddScoped<ICategoryRepository, CategoryRepository>();
-services.AddScoped<ISupplierRepository, SupplierRepository>();
+// ===============================================
+// REPOSITORIOS
+// ===============================================
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
 
-// Services
-services.AddScoped<ICategoryService, CategoryService>();
-services.AddScoped<ISupplierService, SupplierService>();
+// ===============================================
+// SERVICIOS DE NEGOCIO
+// ===============================================
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<ISupplierService, SupplierService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+
+// ===============================================
+// SERVICIOS DE INFRAESTRUCTURA
+// ===============================================
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
 
 // Validators
 services.AddValidatorsFromAssemblyContaining<Program>();
@@ -69,6 +82,9 @@ services.AddValidatorsFromAssemblyContaining<Program>();
 // FluentValidation
 services.AddFluentValidationAutoValidation()
         .AddFluentValidationClientsideAdapters();
+
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // Controllers
 services.AddControllers()
