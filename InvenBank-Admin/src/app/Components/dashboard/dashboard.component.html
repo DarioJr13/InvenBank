@@ -1,0 +1,53 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <h1>Dashboard</h1>
+    <p>Bienvenido al panel administrativo de InvenBank.</p>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="isLoading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Cargando datos del dashboard...</p>
+  </div>
+
+  <!-- Dashboard content -->
+  <div *ngIf="!isLoading" class="dashboard-content">
+
+    <!-- Estadísticas principales -->
+    <div class="stats-grid">
+      <div class="dashboard-card">
+        <div class="card-title">Total de productos</div>
+        <div class="card-value">{{ stats.totalProducts }}</div>
+      </div>
+
+      <div class="dashboard-card">
+        <div class="card-title">Proveedores</div>
+        <div class="card-value">{{ stats.totalSuppliers }}</div>
+      </div>
+
+      <div class="dashboard-card">
+        <div class="card-title">Productos más vendidos</div>
+        <div class="card-subtitle">{{ stats.mostSoldProduct }}</div>
+      </div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div class="quick-actions">
+      <h2>Acciones Rápidas</h2>
+      <div class="actions-grid">
+
+        <button mat-raised-button color="primary" routerLink="/products/new" class="action-button">
+          <mat-icon>add</mat-icon>
+          Registrar producto
+        </button>
+
+        <button mat-stroked-button color="primary" routerLink="/notifications" class="action-button secondary">
+          Ver notificaciones
+        </button>
+
+      </div>
+    </div>
+
+  </div>
+</div>
