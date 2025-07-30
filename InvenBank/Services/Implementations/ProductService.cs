@@ -5,6 +5,7 @@ using InvenBank.API.DTOs.Responses;
 using InvenBank.API.Entities;
 using InvenBank.API.Repositories.Interfaces;
 using InvenBank.API.Services.Interfaces;
+using System.Text.Json;
 
 namespace InvenBank.API.Services.Implementations
 {
@@ -114,7 +115,7 @@ namespace InvenBank.API.Services.Implementations
         }
 
         // ===============================================
-        // CREAR NUEVO PRODUCTO
+        // CREAR NUEVO PRODUCTO ✅ CON MAPEOS COMPLETOS
         // ===============================================
 
         public async Task<ApiResponse<ProductDto>> CreateProductAsync(CreateProductRequest request)
@@ -152,8 +153,14 @@ namespace InvenBank.API.Services.Implementations
                     }
                 }
 
-                // Mapear y crear el producto
+                // ✅ USAR AUTOMAPPER PARA MAPEAR CreateProductRequest -> Product
                 var product = _mapper.Map<Product>(request);
+
+                // Asegurar valores por defecto
+                product.IsActive = true;
+                product.CreatedAt = DateTime.UtcNow;
+                product.UpdatedAt = DateTime.UtcNow;
+
                 var productId = await _productRepository.CreateAsync(product);
 
                 // Obtener el producto creado con estadísticas
@@ -174,7 +181,7 @@ namespace InvenBank.API.Services.Implementations
         }
 
         // ===============================================
-        // ACTUALIZAR PRODUCTO
+        // ACTUALIZAR PRODUCTO ✅ CON MAPEOS COMPLETOS
         // ===============================================
 
         public async Task<ApiResponse<ProductDto>> UpdateProductAsync(int id, UpdateProductRequest request)
@@ -219,9 +226,12 @@ namespace InvenBank.API.Services.Implementations
                     }
                 }
 
-                // Mapear cambios
+                // ✅ USAR AUTOMAPPER PARA MAPEAR UpdateProductRequest -> Product existente
                 _mapper.Map(request, existingProduct);
-                existingProduct.Id = id; // Asegurar que mantenga el ID
+
+                // Mantener campos críticos
+                existingProduct.Id = id;
+                existingProduct.UpdatedAt = DateTime.UtcNow;
 
                 // Actualizar
                 var success = await _productRepository.UpdateAsync(existingProduct);
@@ -330,7 +340,7 @@ namespace InvenBank.API.Services.Implementations
         }
 
         // ===============================================
-        // CATÁLOGO DE PRODUCTOS PARA CLIENTES
+        // CATÁLOGO DE PRODUCTOS PARA CLIENTES ✅
         // ===============================================
 
         public async Task<ApiResponse<IEnumerable<ProductCatalogDto>>> GetProductsCatalogAsync(int? categoryId = null)
@@ -357,7 +367,7 @@ namespace InvenBank.API.Services.Implementations
         }
 
         // ===============================================
-        // PRODUCTOS RELACIONADOS
+        // PRODUCTOS RELACIONADOS ✅
         // ===============================================
 
         public async Task<ApiResponse<IEnumerable<RelatedProductDto>>> GetRelatedProductsAsync(int productId, int limit = 5)
@@ -435,7 +445,7 @@ namespace InvenBank.API.Services.Implementations
         }
 
         // ===============================================
-        // PRODUCTOS POR CATEGORÍA
+        // PRODUCTOS POR CATEGORÍA ✅ CON MAPEOS
         // ===============================================
 
         public async Task<ApiResponse<IEnumerable<ProductDto>>> GetProductsByCategoryAsync(int categoryId)
@@ -444,12 +454,12 @@ namespace InvenBank.API.Services.Implementations
             {
                 _logger.LogInformation("Obteniendo productos por categoría: {CategoryId}", categoryId);
 
+                // El repositorio ya devuelve ProductDto, no necesitamos mapear
                 var products = await _productRepository.GetProductsByCategoryAsync(categoryId);
-                var productDtos = _mapper.Map<IEnumerable<ProductDto>>(products);
 
                 return ApiResponse<IEnumerable<ProductDto>>.SuccessResult(
-                    productDtos,
-                    $"Se obtuvieron {productDtos.Count()} productos de la categoría"
+                    products,
+                    $"Se obtuvieron {products.Count()} productos de la categoría"
                 );
             }
             catch (Exception ex)
@@ -462,7 +472,7 @@ namespace InvenBank.API.Services.Implementations
         }
 
         // ===============================================
-        // PRODUCTOS POR MARCA
+        // PRODUCTOS POR MARCA ✅ CON MAPEOS
         // ===============================================
 
         public async Task<ApiResponse<IEnumerable<ProductDto>>> GetProductsByBrandAsync(string brand)
@@ -471,12 +481,12 @@ namespace InvenBank.API.Services.Implementations
             {
                 _logger.LogInformation("Obteniendo productos por marca: {Brand}", brand);
 
+                // El repositorio ya devuelve ProductDto, no necesitamos mapear
                 var products = await _productRepository.GetProductsByBrandAsync(brand);
-                var productDtos = _mapper.Map<IEnumerable<ProductDto>>(products);
 
                 return ApiResponse<IEnumerable<ProductDto>>.SuccessResult(
-                    productDtos,
-                    $"Se obtuvieron {productDtos.Count()} productos de la marca {brand}"
+                    products,
+                    $"Se obtuvieron {products.Count()} productos de la marca {brand}"
                 );
             }
             catch (Exception ex)
@@ -489,6 +499,82 @@ namespace InvenBank.API.Services.Implementations
         }
 
         // ===============================================
+        // MÉTODOS ADICIONALES PARA IMPORTACIÓN/EXPORTACIÓN
+        // ===============================================
+
+        public async Task<ApiResponse<IEnumerable<ProductDto>>> ImportProductsAsync(IEnumerable<ProductImportDto> importData)
+        {
+            try
+            {
+                _logger.LogInformation("Importando {Count} productos", importData.Count());
+
+                var importedProducts = new List<ProductDto>();
+
+                foreach (var importItem in importData)
+                {
+                    // Buscar la categoría por nombre
+                    var categories = await _categoryRepository.GetAllAsync();
+                    var category = categories.FirstOrDefault(c => c.Name.Equals(importItem.CategoryName, StringComparison.OrdinalIgnoreCase));
+
+                    if (category == null)
+                    {
+                        _logger.LogWarning("Categoría no encontrada para importación: {CategoryName}", importItem.CategoryName);
+                        continue;
+                    }
+
+                    // ✅ USAR AUTOMAPPER PARA MAPEAR ProductImportDto -> Product
+                    var product = _mapper.Map<Product>(importItem);
+                    product.CategoryId = category.Id;
+
+                    var productId = await _productRepository.CreateAsync(product);
+                    var createdProduct = await _productRepository.GetProductWithStatsAsync(productId);
+
+                    if (createdProduct != null)
+                    {
+                        importedProducts.Add(createdProduct);
+                    }
+                }
+
+                return ApiResponse<IEnumerable<ProductDto>>.SuccessResult(
+                    importedProducts,
+                    $"Se importaron {importedProducts.Count} productos exitosamente"
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al importar productos");
+                return ApiResponse<IEnumerable<ProductDto>>.ErrorResult(
+                    "Error al importar productos"
+                );
+            }
+        }
+
+        public async Task<ApiResponse<IEnumerable<ProductExportDto>>> ExportProductsAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Exportando productos");
+
+                var products = await _productRepository.GetAllAsync();
+
+                // ✅ USAR AUTOMAPPER PARA MAPEAR Product -> ProductExportDto
+                var exportData = _mapper.Map<IEnumerable<ProductExportDto>>(products);
+
+                return ApiResponse<IEnumerable<ProductExportDto>>.SuccessResult(
+                    exportData,
+                    $"Se exportaron {exportData.Count()} productos exitosamente"
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al exportar productos");
+                return ApiResponse<IEnumerable<ProductExportDto>>.ErrorResult(
+                    "Error al exportar productos"
+                );
+            }
+        }
+
+        // ===============================================
         // MÉTODOS DE UTILIDAD PRIVADOS
         // ===============================================
 
@@ -496,10 +582,10 @@ namespace InvenBank.API.Services.Implementations
         {
             try
             {
-                System.Text.Json.JsonDocument.Parse(jsonString);
+                JsonDocument.Parse(jsonString);
                 return true;
             }
-            catch (System.Text.Json.JsonException)
+            catch (JsonException)
             {
                 return false;
             }

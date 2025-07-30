@@ -1,4 +1,4 @@
-using FluentValidation;
+ï»¿using FluentValidation;
 using FluentValidation.AspNetCore;
 using InvenBank.API.Configuration;
 using InvenBank.API.Middleware;
@@ -18,7 +18,7 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // ===============================================
-// CONFIGURACIÓN DE SERILOG
+// CONFIGURACIÃ“N DE SERILOG
 // ===============================================
 
 Log.Logger = new LoggerConfiguration()
@@ -30,7 +30,7 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // ===============================================
-// CONFIGURACIÓN DE SERVICIOS
+// CONFIGURACIÃ“N DE SERVICIOS
 // ===============================================
 
 var services = builder.Services;
@@ -42,19 +42,20 @@ services.Configure<CorsSettings>(configuration.GetSection(CorsSettings.SectionNa
 services.Configure<SwaggerSettings>(configuration.GetSection(SwaggerSettings.SectionName));
 services.Configure<ApiSettings>(configuration.GetSection(ApiSettings.SectionName));
 
-// Configuración de base de datos
+// ConfiguraciÃ³n de base de datos
 services.AddScoped<IDbConnection>(sp =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
     return new SqlConnection(connectionString);
 });
 
-// Servicios de autenticación
+// Servicios de autenticaciÃ³n
 services.AddScoped<IJwtService, JwtService>();
 services.AddScoped<IPasswordHashService, PasswordHashService>();
 
 // AutoMapper
 services.AddAutoMapper(typeof(Program));
+builder.Services.AddAutoMapper(typeof(AutoMapperProfile), typeof(ProductMappingProfile));
 
 // ===============================================
 // REPOSITORIOS
@@ -62,6 +63,7 @@ services.AddAutoMapper(typeof(Program));
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
+// Agregar otros repositorios segÃºn se implementen
 
 // ===============================================
 // SERVICIOS DE NEGOCIO
@@ -69,10 +71,6 @@ builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IProductService, ProductService>();
-
-// ===============================================
-// SERVICIOS DE INFRAESTRUCTURA
-// ===============================================
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
 
@@ -95,7 +93,7 @@ services.AddControllers()
     });
 
 // ===============================================
-// CONFIGURACIÓN JWT
+// CONFIGURACIÃ“N JWT
 // ===============================================
 
 var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
@@ -126,7 +124,7 @@ services.AddAuthentication(options =>
     {
         OnAuthenticationFailed = context =>
         {
-            Log.Warning("Autenticación JWT fallida: {Message}", context.Exception.Message);
+            Log.Warning("AutenticaciÃ³n JWT fallida: {Message}", context.Exception.Message);
             return Task.CompletedTask;
         },
         OnTokenValidated = context =>
@@ -139,7 +137,7 @@ services.AddAuthentication(options =>
 });
 
 // ===============================================
-// CONFIGURACIÓN CORS
+// CONFIGURACIÃ“N CORS
 // ===============================================
 
 var corsSettings = configuration.GetSection(CorsSettings.SectionName).Get<CorsSettings>();
@@ -160,7 +158,7 @@ services.AddCors(options =>
 });
 
 // ===============================================
-// CONFIGURACIÓN SWAGGER
+// CONFIGURACIÃ“N SWAGGER
 // ===============================================
 
 var swaggerSettings = configuration.GetSection(SwaggerSettings.SectionName).Get<SwaggerSettings>();
@@ -180,7 +178,7 @@ services.AddSwaggerGen(options =>
         }
     });
 
-    // Configuración JWT en Swagger
+    // ConfiguraciÃ³n JWT en Swagger
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = @"JWT Authorization header usando el esquema Bearer. 
@@ -220,10 +218,10 @@ services.AddSwaggerGen(options =>
 });
 
 // ===============================================
-// CONFIGURACIÓN ADICIONAL
+// CONFIGURACIÃ“N ADICIONAL
 // ===============================================
 
-// Compresión de respuestas
+// CompresiÃ³n de respuestas
 services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
@@ -234,13 +232,13 @@ services.AddHealthChecks()
     .AddSqlServer(configuration.GetConnectionString("DefaultConnection")!);
 
 // ===============================================
-// CONSTRUCCIÓN DE LA APLICACIÓN
+// CONSTRUCCIÃ“N DE LA APLICACIÃ“N
 // ===============================================
 
 var app = builder.Build();
 
 // ===============================================
-// CONFIGURACIÓN DEL PIPELINE
+// CONFIGURACIÃ“N DEL PIPELINE
 // ===============================================
 
 // Logging de requests (solo en desarrollo)
@@ -259,7 +257,7 @@ app.UseErrorHandling();
 //    app.UseSwaggerUI(options =>
 //    {
 //        options.SwaggerEndpoint("/swagger/v1/swagger.json", $"{swaggerSettings!.Title} {swaggerSettings.Version}");
-//        options.RoutePrefix = string.Empty; // Swagger en la raíz
+//        options.RoutePrefix = string.Empty; // Swagger en la raÃ­z
 //        options.DocumentTitle = swaggerSettings.Title;
 //    });
 //}
@@ -275,13 +273,13 @@ app.UseSwaggerUI(options =>
 // HTTPS Redirection
 app.UseHttpsRedirection();
 
-// Compresión
+// CompresiÃ³n
 app.UseResponseCompression();
 
 // CORS
 app.UseCors("InvenBankCorsPolicy");
 
-// Autenticación y Autorización
+// AutenticaciÃ³n y AutorizaciÃ³n
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -307,7 +305,7 @@ try
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "La aplicación falló al iniciar");
+    Log.Fatal(ex, "La aplicaciÃ³n fallÃ³ al iniciar");
 }
 finally
 {
