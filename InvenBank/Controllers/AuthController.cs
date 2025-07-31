@@ -457,5 +457,76 @@ public class AuthController : ControllerBase
             _logger.LogError(ex, "Error al crear usuario admin temporal");
             return StatusCode(500, ApiResponse<object>.ErrorResult("Error al crear usuario admin"));
         }
+
+    }
+
+    /// <summary>
+    /// Endpoint temporal para crear usuario customer (solo para testing)
+    /// </summary>
+    /// <returns>Usuario customer creado</returns>
+    [HttpPost("create-customer-temp")]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+    public async Task<IActionResult> CreateTempCustomer()
+    {
+        try
+        {
+            // Verificar si ya existe customer
+            var existingCustomer = await _connection.QueryFirstOrDefaultAsync(
+                "SELECT Id FROM Users WHERE Email = @Email",
+                new { Email = "customer@invenbank.com" }
+            );
+
+            if (existingCustomer != null)
+            {
+                return Ok(ApiResponse<object>.SuccessResult(
+                    new { Message = "Customer ya existe", Email = "customer@invenbank.com" },
+                    "Usuario customer ya está disponible"
+                ));
+            }
+
+            // Crear usuario customer temporal
+            var customerRoleId = await _connection.QueryFirstOrDefaultAsync<int>(
+                "SELECT Id FROM Roles WHERE Name = 'Customer'"
+            );
+
+            if (customerRoleId == 0)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult("Rol Customer no encontrado en la base de datos"));
+            }
+
+            var passwordHash = _passwordHashService.HashPassword("Customer123*");
+
+            var sql = @"
+            INSERT INTO Users (Email, PasswordHash, FirstName, LastName, RoleId, IsActive, CreatedAt, UpdatedAt)
+            VALUES (@Email, @PasswordHash, @FirstName, @LastName, @RoleId, 1, GETDATE(), GETDATE());
+            SELECT CAST(SCOPE_IDENTITY() AS int);";
+
+            var userId = await _connection.QuerySingleAsync<int>(sql, new
+            {
+                Email = "customer@invenbank.com",
+                PasswordHash = passwordHash,
+                FirstName = "Test",
+                LastName = "Customer",
+                RoleId = customerRoleId
+            });
+
+            _logger.LogInformation("Usuario customer temporal creado con Id: {UserId}", userId);
+
+            return Ok(ApiResponse<object>.SuccessResult(
+                new
+                {
+                    UserId = userId,
+                    Email = "customer@invenbank.com",
+                    Password = "Customer123*",
+                    Message = "Usuario customer creado exitosamente"
+                },
+                "Usuario customer temporal creado"
+            ));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al crear usuario customer temporal");
+            return StatusCode(500, ApiResponse<object>.ErrorResult("Error al crear usuario customer"));
+        }
     }
 }
