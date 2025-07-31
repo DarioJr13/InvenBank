@@ -1,11 +1,25 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+
 import { DashboardService } from '../../services/dashboard.service';
 import { DashboardStats } from '../../models';
 
 @Component({
+  standalone: true,
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss']
+  styleUrls: ['./dashboard.component.scss'],
+  imports: [
+    CommonModule,
+    RouterModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule
+  ]
 })
 export class DashboardComponent implements OnInit {
   stats: DashboardStats = {
@@ -27,13 +41,9 @@ export class DashboardComponent implements OnInit {
     this.loadDashboardData();
   }
 
-  /**
-   * Cargar datos del dashboard
-   */
   loadDashboardData(): void {
     this.isLoading = true;
 
-    // Simular datos mientras se implementa el endpoint
     setTimeout(() => {
       this.stats = {
         totalProducts: 120,
@@ -47,8 +57,7 @@ export class DashboardComponent implements OnInit {
       };
       this.isLoading = false;
     }, 1000);
-
-    /* Cuando el endpoint esté listo:
+      /* Cuando el endpoint esté listo:
     this.dashboardService.getDashboardStats().subscribe({
       next: (response) => {
         if (response.success) {

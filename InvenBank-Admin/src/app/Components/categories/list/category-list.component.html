@@ -1,0 +1,48 @@
+<div class="category-list-header">
+  <div class="header-left">
+    <h1>📂 Categorías</h1>
+    <p>Explora y administra las categorías disponibles</p>
+  </div>
+  <button mat-raised-button color="primary">
+    <mat-icon>add</mat-icon>
+    Nueva Categoría
+  </button>
+</div>
+
+<!-- Cargando -->
+<mat-progress-spinner *ngIf="isLoading" mode="indeterminate" diameter="50"></mat-progress-spinner>
+
+<!-- Sin datos -->
+<div *ngIf="!isLoading && categories.length === 0" class="no-categories">
+  <mat-icon>folder_off</mat-icon>
+  <p>No hay categorías registradas aún</p>
+  <button mat-raised-button color="primary">
+    Crear primera categoría
+  </button>
+</div>
+
+<!-- Grid de categorías -->
+<div *ngIf="!isLoading && categories.length > 0" class="categories-grid">
+  <mat-card *ngFor="let category of categories" class="category-card" appearance="outlined">
+    <mat-card-header>
+      <mat-card-title>{{ category.name }}</mat-card-title>
+      <mat-card-subtitle>{{ category.description }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="chip-group">
+        <mat-chip color="accent" selected>{{ category.productsCount }} productos</mat-chip>
+        <mat-chip [color]="category.isActive ? 'primary' : 'warn'" selected>
+          {{ category.isActive ? 'Activa' : 'Inactiva' }}
+        </mat-chip>
+      </div>
+    </mat-card-content>
+    <mat-card-actions align="end">
+      <button mat-icon-button color="primary" matTooltip="Editar">
+        <mat-icon>edit</mat-icon>
+      </button>
+      <button mat-icon-button color="warn" matTooltip="Eliminar">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>

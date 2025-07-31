@@ -1,9 +1,18 @@
 import { Component, OnInit } from '@angular/core';
-import { LoadingService } from './services/loading.service';
+import { RouterOutlet } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Observable } from 'rxjs';
+import { LoadingService } from './services/loading.service';
 
 @Component({
+  standalone: true, // ✅ Ahora es standalone
   selector: 'app-root',
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    MatProgressSpinnerModule
+  ],
   template: `
     <!-- Loading global -->
     <div *ngIf="loading$ | async" class="global-loading">
@@ -28,18 +37,18 @@ import { Observable } from 'rxjs';
       display: flex;
       align-items: center;
       justify-content: center;
+    }
 
-      .loading-content {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        color: #c2185b;
+    .loading-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #c2185b;
+    }
 
-        p {
-          margin-top: 1rem;
-          font-weight: 500;
-        }
-      }
+    .loading-content p {
+      margin-top: 1rem;
+      font-weight: 500;
     }
   `]
 })
@@ -51,7 +60,5 @@ export class AppComponent implements OnInit {
     this.loading$ = this.loadingService.loading$;
   }
 
-  ngOnInit(): void {
-    // Configuraciones iniciales si es necesario
-  }
+  ngOnInit(): void {}
 }

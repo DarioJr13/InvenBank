@@ -1,100 +1,65 @@
-<div class="login-container">
-  <div class="login-card">
-    <!-- Header con logo -->
-    <div class="login-header">
-      <div class="logo">
-        <div class="logo-icon">IB</div>
-        <span class="logo-text">InvenBank</span>
-      </div>
-      <h1>Panel Administrativo</h1>
-      <p>Ingresa tus credenciales para acceder</p>
-    </div>
+<div class="login-wrapper">
+  <div class="login-logo">
+    <img src="assets/IvenBankLogo.png" alt="InvenBank Logo" />
+    <h1>InvenBank</h1>
+  </div>
 
-    <!-- Formulario de login -->
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+  <mat-card class="login-card">
+    <h2 class="login-title">Inicio de Sesión</h2>
 
-      <!-- Campo Email -->
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" autocomplete="on">
+
+      <!-- Email / Usuario -->
       <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Email</mat-label>
+        <mat-label>Correo electrónico</mat-label>
         <input
           matInput
-          type="email"
           formControlName="email"
-          placeholder="admin@invenbank.com"
-          autocomplete="email">
-        <mat-icon matSuffix>email</mat-icon>
-        <mat-error *ngIf="hasError('email', 'required')">
-          Email es requerido
-        </mat-error>
-        <mat-error *ngIf="hasError('email', 'email')">
-          Email debe tener un formato válido
-        </mat-error>
+          type="email"
+          autocomplete="username"
+          placeholder="usuario@correo.com"
+        />
+        <mat-error *ngIf="hasError('email', 'required')">El correo es requerido</mat-error>
+        <mat-error *ngIf="hasError('email', 'email')">Correo inválido</mat-error>
       </mat-form-field>
 
-      <!-- Campo Contraseña -->
+      <!-- Contraseña -->
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Contraseña</mat-label>
         <input
           matInput
           [type]="hidePassword ? 'password' : 'text'"
           formControlName="password"
-          placeholder="••••••••"
-          autocomplete="current-password">
+          autocomplete="current-password"
+          placeholder="••••••"
+        />
         <button
           mat-icon-button
           matSuffix
-          type="button"
           (click)="togglePasswordVisibility()"
-          [attr.aria-label]="'Hide password'"
-          [attr.aria-pressed]="hidePassword">
-          <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+          [attr.aria-label]="'Mostrar u ocultar contraseña'"
+          [attr.aria-pressed]="!hidePassword"
+          type="button"
+        >
+          <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
         </button>
-        <mat-error *ngIf="hasError('password', 'required')">
-          Contraseña es requerida
-        </mat-error>
+        <mat-error *ngIf="hasError('password', 'required')">La contraseña es requerida</mat-error>
         <mat-error *ngIf="hasError('password', 'minlength')">
-          Contraseña debe tener al menos 6 caracteres
+          Debe tener al menos 6 caracteres
         </mat-error>
       </mat-form-field>
 
       <!-- Botón de login -->
       <button
-        mat-raised-button
+        mat-flat-button
         color="primary"
         type="submit"
-        class="login-button full-width"
-        [disabled]="isLoading">
-
-        <mat-spinner
-          *ngIf="isLoading"
-          diameter="20"
-          class="login-spinner">
-        </mat-spinner>
-
-        <span *ngIf="!isLoading">Iniciar Sesión</span>
-        <span *ngIf="isLoading">Iniciando sesión...</span>
+        class="login-button"
+        [disabled]="isLoading || loginForm.invalid"
+      >
+        <mat-spinner *ngIf="isLoading" diameter="20"></mat-spinner>
+        <span *ngIf="!isLoading">Iniciar sesión</span>
       </button>
-
     </form>
-
-    <!-- Información de acceso de prueba -->
-    <div class="test-credentials">
-      <mat-divider></mat-divider>
-      <h3>Credenciales de prueba</h3>
-      <div class="credential-item">
-        <strong>Admin:</strong>
-        <span>admin@invenbank.com / Admin123!</span>
-      </div>
-      <div class="credential-item">
-        <strong>Usuario:</strong>
-        <span>user@invenbank.com / User123!</span>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Footer -->
-  <div class="login-footer">
-    <p>&copy; 2024 InvenBank. Todos los derechos reservados.</p>
-  </div>
+  </mat-card>
 </div>

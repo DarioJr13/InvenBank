@@ -11,7 +11,7 @@ describe('CategoryListComponent', () => {
       imports: [CategoryListComponent]
     })
     .compileComponents();
-    
+
     fixture = TestBed.createComponent(CategoryListComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
