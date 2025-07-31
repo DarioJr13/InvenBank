@@ -1,0 +1,85 @@
+<div class="modal-header">
+  <h2 mat-dialog-title>{{ dialogTitle }}</h2>
+  <p class="product-info">{{ data.productName }}</p>
+</div>
+
+<div class="modal-content" *ngIf="!isLoading">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+    <!-- Proveedor -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Proveedor *</mat-label>
+      <mat-select formControlName="supplierId">
+        <mat-option value="">Selecciona un proveedor</mat-option>
+        <mat-option *ngFor="let supplier of suppliers" [value]="supplier.id">
+          {{ supplier.name }}
+        </mat-option>
+      </mat-select>
+      <mat-error>{{ getErrorMessage('supplierId') }}</mat-error>
+    </mat-form-field>
+
+    <!-- Precio y Stock -->
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Precio *</mat-label>
+        <input matInput type="number"
+               formControlName="price"
+               min="0.01"
+               step="0.01">
+        <span matPrefix>$&nbsp;</span>
+        <mat-error>{{ getErrorMessage('price') }}</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Stock *</mat-label>
+        <input matInput type="number"
+               formControlName="stock"
+               min="0">
+        <mat-error>{{ getErrorMessage('stock') }}</mat-error>
+      </mat-form-field>
+    </div>
+
+    <!-- Número de lote -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Número de lote *</mat-label>
+      <input matInput formControlName="batchNumber"
+             placeholder="Ej: BATCH-2024-001">
+      <mat-error>{{ getErrorMessage('batchNumber') }}</mat-error>
+    </mat-form-field>
+
+    <!-- SKU del proveedor -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>SKU del proveedor *</mat-label>
+      <input matInput formControlName="supplierSku"
+             placeholder="Código del producto según el proveedor">
+      <mat-error>{{ getErrorMessage('supplierSku') }}</mat-error>
+    </mat-form-field>
+
+  </form>
+</div>
+
+<div class="loading-container" *ngIf="isLoading">
+  <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+  <p>Cargando proveedores...</p>
+</div>
+
+<div class="modal-actions" mat-dialog-actions>
+  <button mat-stroked-button
+          type="button"
+          (click)="onCancel()"
+          [disabled]="isSaving">
+    Cancelar
+  </button>
+
+  <button mat-raised-button
+          color="primary"
+          type="submit"
+          [disabled]="form.invalid || isSaving"
+          (click)="onSubmit()">
+    <mat-progress-spinner *ngIf="isSaving"
+                          diameter="16"
+                          mode="indeterminate">
+    </mat-progress-spinner>
+    {{ submitButtonText }}
+  </button>
+</div>

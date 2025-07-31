@@ -1,0 +1,17 @@
+<div class="overview-container">
+  <mat-card class="overview-card primary">
+    <mat-icon>inventory_2</mat-icon>
+    <div class="details">
+      <h3>Total de productos</h3>
+      <p>{{ totalProducts }}</p>
+    </div>
+  </mat-card>
+
+  <mat-card class="overview-card accent">
+    <mat-icon>star</mat-icon>
+    <div class="details">
+      <h3>Más vendido</h3>
+      <p>{{ topSellingProduct || 'N/A' }}</p>
+    </div>
+  </mat-card>
+</div>

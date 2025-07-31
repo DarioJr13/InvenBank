@@ -1,4 +1,3 @@
-// app.routes.ts
 import { Routes } from '@angular/router';
 import { AuthGuard } from './guards/auth.guard';
 import { AdminGuard } from './guards/admin.guard';
@@ -18,70 +17,62 @@ export const routes: Routes = [
   {
     path: 'dashboard',
     loadComponent: () => import('./Components/dashboard/dashboard.component').then(m => m.DashboardComponent),
-    canActivate: [AuthGuard, AdminGuard]
+    canActivate: [AuthGuard],
+    children: [
+      {
+        path: '',
+        redirectTo: 'overview',
+        pathMatch: 'full'
+      },
+      {
+        path: 'overview',
+        loadComponent: () => import('./Components/overview/overview.component').then(m => m.OverviewComponent)
+      },
+      {
+        path: 'products',
+        loadComponent: () => import('./Components/products/product-list.component').then(m => m.ProductListComponent)
+      },
+      {
+        path: 'suppliers',
+        loadComponent: () => import('./Components/suppliers/supplier-list.component').then(m => m.SupplierListComponent)
+      }
+    ]
   },
   {
     path: 'products',
-    loadComponent: () => import('./Components/products/product-list.component').then(m => m.ProductListComponent),
-    canActivate: [AuthGuard]
+    canActivate: [AuthGuard],
+    children: [
+      {
+        path: '',
+        loadComponent: () => import('./Components/products/product-list.component').then(m => m.ProductListComponent)
+      },
+      {
+        path: 'create',
+        loadComponent: () => import('./Components/product-form/product-form.component').then(m => m.ProductFormComponent)
+      },
+      {
+        path: ':id/edit',
+        loadComponent: () => import('./Components/product-form/product-form.component').then(m => m.ProductFormComponent)
+      },
+      {
+        path: ':id/suppliers',
+        loadComponent: () => import('./Components/products/product-suppliers.component').then(m => m.ProductSuppliersComponent)
+      }
+    ]
   },
-{
-  path: 'unauthorized',
-  loadComponent: () => import('./Components/errors/unauthorized/unauthorized.component').then(m => m.UnauthorizedComponent)
-}
-  // {
-  //   path: '**',
-  //   loadComponent: () => import('./Components/errors/not-found.component').then(m => m.NotFoundComponent)
-  // }
+  {
+    path: 'unauthorized',
+    loadComponent: () => import('./Components/errors/unauthorized/unauthorized.component').then(m => m.UnauthorizedComponent)
+  }
 ];
 
 
 
 
-// import { Routes } from '@angular/router';
-// import { AuthGuard } from './guards/auth.guard';
-// import { AdminGuard } from './guards/admin.guard';
 
-// export const routes: Routes = [
-//   {
-//     path: 'login',
-//     loadComponent: () => import('./Components/login/login.component').then(m => m.LoginComponent)
-//   },
-//  {
-//     path: 'dashboard',
-//     loadComponent: () => import('./Components/dashboard/dashboard.component').then(m => m.DashboardComponent),
-//     canActivate: [AuthGuard, AdminGuard]
-//   },
-//   {
-//     path: 'products',
-//     loadComponent: () => import('./Components/products/product-list.component').then(m => m.ProductListComponent)
-//   },
-//   {
-//     path: 'suppliers',
-//     loadComponent: () => import('./Components/suppliers/supplier-list.component').then(m => m.SupplierListComponent),
-//     canActivate: [AuthGuard]
-//   },
-//   {
-//     path: 'categories',
-//     loadComponent: () => import('./Components/categories/list/category-list.component').then(m => m.CategoryListComponent),
-//     canActivate: [AuthGuard]
-//   },
-//   // {
-//   //   path: 'users',
-//   //   loadComponent: () => import('./Components/users/user-list.component').then(m => m.UserListComponent),
-//   //   canActivate: [import('./guards/auth.guard').then(m => m.AuthGuard)]
-//   // },
 // {
-//   path: 'unauthorized',
-//   loadComponent: () => import('./Components/errors/unauthorized/unauthorized.component').then(m => m.UnauthorizedComponent)
-// },
-//   // {
-//   //   path: '**',
-//   //   loadComponent: () => import('./Components/errors/not-found.component').then(m => m.NotFoundComponent)
-//   // },
-//   {
-//     path: '',
-//     redirectTo: 'login',
-//     pathMatch: 'full'
-//   }
-// ];
+  //   path: '**',
+  //   loadComponent: () => import('./Components/errors/not-found.component').then(m => m.NotFoundComponent)
+  // }
+
+

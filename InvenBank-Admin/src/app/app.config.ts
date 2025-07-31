@@ -1,31 +1,31 @@
-// app.config.ts
-import { ApplicationConfig } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { JwtModule } from '@auth0/angular-jwt';
+
 import { routes } from './app.routes';
-import { provideHttpClient } from '@angular/common/http';
+import { AuthInterceptor } from './interceptors/auth.interceptor';
+
+export function tokenGetter() {
+  return localStorage.getItem('access_token');
+}
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
-    provideHttpClient() // ✅ Agrega esta línea
+    provideAnimationsAsync(),
+    provideHttpClient(
+      withInterceptors([AuthInterceptor])
+    ),
+    importProvidersFrom(
+      JwtModule.forRoot({
+        config: {
+          tokenGetter,
+          allowedDomains: ['localhost:5207'],
+          disallowedRoutes: []
+        }
+      })
+    )
   ]
 };
-
-
-
-// import { importProvidersFrom } from '@angular/core';
-// import { provideRouter } from '@angular/router';
-// import { HttpClientModule } from '@angular/common/http';
-// import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-
-// import { routes } from './app.routes';
-
-// export const appConfig = {
-//   providers: [
-//     importProvidersFrom(
-//       HttpClientModule,
-//       BrowserAnimationsModule
-//     ),
-//     provideRouter(routes)
-//   ]
-// };

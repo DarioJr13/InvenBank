@@ -1,0 +1,90 @@
+.modal-header {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #e5e7eb;
+
+  h2 {
+    margin: 0 0 8px 0;
+    color: #111827;
+    font-weight: 600;
+  }
+
+  .product-info {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.9rem;
+  }
+}
+
+.modal-content {
+  padding: 24px;
+  min-width: 400px;
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .full-width {
+      width: 100%;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+
+      .half-width {
+        flex: 1;
+      }
+    }
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+
+  p {
+    margin-top: 16px;
+    color: #6b7280;
+  }
+}
+
+.modal-actions {
+  padding: 16px 24px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+
+  button {
+    min-width: 100px;
+
+    mat-progress-spinner {
+      margin-right: 8px;
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 480px) {
+  .modal-content {
+    min-width: 300px;
+
+    .form-row {
+      flex-direction: column;
+      gap: 0;
+    }
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+
+    button {
+      width: 100%;
+    }
+  }
+}

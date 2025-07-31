@@ -1,31 +1,51 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+
 import { ProductService } from '../../services/product.service';
 import { CategoryService } from '../../services/category.service';
-import { SupplierService } from '../../services/supplier.service';
-import { ProductSupplierService } from '../../services/product-supplier.service';
 import { NotificationService } from '../../services/notification.service';
-import { Product, Category, Supplier, ProductSupplier, CreateProductRequest, UpdateProductRequest } from '../../models';
+import { Product, Category, CreateProductRequest, UpdateProductRequest } from '../../models';
 
 @Component({
   selector: 'app-product-form',
+  standalone: true,
   templateUrl: './product-form.component.html',
-  styleUrls: ['./product-form.component.scss']
+  styleUrls: ['./product-form.component.scss'],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatToolbarModule,
+    MatSlideToggleModule
+  ]
 })
 export class ProductFormComponent implements OnInit {
   productForm: FormGroup;
-  supplierForm: FormGroup;
 
   isEditMode = false;
   isLoading = false;
   isSaving = false;
   productId: number | null = null;
 
-  product: Product | null = null;
   categories: Category[] = [];
-  suppliers: Supplier[] = [];
-  productSuppliers: ProductSupplier[] = [];
+  product: Product | null = null;
 
   constructor(
     private formBuilder: FormBuilder,
@@ -33,122 +53,61 @@ export class ProductFormComponent implements OnInit {
     private router: Router,
     private productService: ProductService,
     private categoryService: CategoryService,
-    private supplierService: SupplierService,
-    private productSupplierService: ProductSupplierService,
     private notificationService: NotificationService
   ) {
-    this.productForm = this.createProductForm();
-    this.supplierForm = this.createSupplierForm();
+    this.productForm = this.createForm();
   }
 
   ngOnInit(): void {
-    this.loadInitialData();
     this.checkEditMode();
+    this.loadCategories();
   }
 
-  /**
-   * Crear formulario de producto
-   */
-  private createProductForm(): FormGroup {
+  private createForm(): FormGroup {
     return this.formBuilder.group({
-      name: ['', [Validators.required, Validators.minLength(2)]],
-      description: ['', [Validators.required, Validators.minLength(10)]],
-      sku: ['', [Validators.required, Validators.pattern(/^[A-Z0-9-]+$/)]],
-      brand: ['', [Validators.required, Validators.minLength(2)]],
-      categoryId: ['', [Validators.required]],
-      imageUrl: [''],
+      name: ['', [Validators.required, Validators.maxLength(200)]],
+      description: [''],
+      sku: ['', [Validators.required, Validators.maxLength(50)]],
+      brand: ['', [Validators.maxLength(100)]],
+      categoryId: [null, [Validators.required]],
+      imageUrl: ['', [Validators.maxLength(500)]],
       isActive: [true]
     });
   }
 
-  /**
-   * Crear formulario de proveedor
-   */
-  private createSupplierForm(): FormGroup {
-    return this.formBuilder.group({
-      supplierId: ['', [Validators.required]],
-      price: ['', [Validators.required, Validators.min(0.01)]],
-      stock: ['', [Validators.required, Validators.min(0)]],
-      batchNumber: ['', [Validators.required]],
-      supplierSku: ['', [Validators.required]]
-    });
-  }
-
-  /**
-   * Cargar datos iniciales
-   */
-  private loadInitialData(): void {
-    this.loadCategories();
-    this.loadSuppliers();
-  }
-
-  /**
-   * Verificar si está en modo edición
-   */
   private checkEditMode(): void {
     const id = this.route.snapshot.paramMap.get('id');
-    if (id && id !== 'new') {
+    if (id && id !== 'create') {
       this.isEditMode = true;
-      this.productId = parseInt(id);
-      this.loadProductData();
+      this.productId = +id;
+      this.loadProduct();
     }
   }
 
-  /**
-   * Cargar categorías
-   */
-  private loadCategories(): void {
-    this.categoryService.getAllCategories().subscribe({
-      next: (response) => {
-       this.categories = response.filter((c: any) => c.isActive);
-      },
-      error: (error) => {
-        this.notificationService.error('Error', 'No se pudieron cargar las categorías');
-      }
-    });
-  }
-
-  /**
-   * Cargar proveedores
-   */
-  private loadSuppliers(): void {
-    this.supplierService.getAllSuppliers().subscribe({
-      next: (response) => {
-        this.suppliers = response.filter((c: any) => c.isActive);
-      },
-      error: (error) => {
-        this.notificationService.error('Error', 'No se pudieron cargar los proveedores');
-      }
-    });
-  }
-
-  /**
-   * Cargar datos del producto (modo edición)
-   */
-  private loadProductData(): void {
+  private loadProduct(): void {
     if (!this.productId) return;
 
     this.isLoading = true;
-
-    this.productService.getProduct(this.productId).subscribe({
+    this.productService.getProductById(this.productId).subscribe({
       next: (response) => {
-        if (response.success) {
+        if (response.success && response.data) {
           this.product = response.data;
           this.populateForm();
+        } else {
+          this.notificationService.error('Error', 'No se pudo cargar el producto');
+          this.goBack();
         }
         this.isLoading = false;
       },
       error: (error) => {
+        console.error('Error loading product:', error);
         this.notificationService.error('Error', 'No se pudo cargar el producto');
-        this.router.navigate(['/products']);
+        this.goBack();
         this.isLoading = false;
       }
     });
   }
 
-  /**
-   * Poblar formulario con datos del producto
-   */
   private populateForm(): void {
     if (!this.product) return;
 
@@ -161,249 +120,139 @@ export class ProductFormComponent implements OnInit {
       imageUrl: this.product.imageUrl,
       isActive: this.product.isActive
     });
-
-    this.productSuppliers = this.product.suppliers || [];
   }
 
-  /**
-   * Obtener controles del formulario de producto
-   */
-  get pf() {
-    return this.productForm.controls;
+  private loadCategories(): void {
+    this.categoryService.getAllCategories().subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.categories = response.data;
+        }
+      },
+      error: (error) => {
+        console.error('Error loading categories:', error);
+        this.notificationService.error('Error', 'No se pudieron cargar las categorías');
+      }
+    });
   }
 
-  /**
-   * Obtener controles del formulario de proveedor
-   */
-  get sf() {
-    return this.supplierForm.controls;
-  }
-
-  /**
-   * Verificar si un campo tiene errores
-   */
-  hasError(formGroup: FormGroup, fieldName: string, errorType: string): boolean {
-    const field = formGroup.get(fieldName);
-    return field ? field.hasError(errorType) && (field.dirty || field.touched) : false;
-  }
-
-  /**
-   * Obtener mensaje de error
-   */
-  getErrorMessage(formGroup: FormGroup, fieldName: string): string {
-    const field = formGroup.get(fieldName);
-
-    if (field?.hasError('required')) {
-      return `${this.getFieldLabel(fieldName)} es requerido`;
-    }
-
-    if (field?.hasError('minlength')) {
-      const minLength = field.errors?.['minlength'].requiredLength;
-      return `${this.getFieldLabel(fieldName)} debe tener al menos ${minLength} caracteres`;
-    }
-
-    if (field?.hasError('pattern')) {
-      return `${this.getFieldLabel(fieldName)} tiene un formato inválido`;
-    }
-
-    if (field?.hasError('min')) {
-      return `${this.getFieldLabel(fieldName)} debe ser mayor que 0`;
-    }
-
-    return '';
-  }
-
-  /**
-   * Obtener etiqueta del campo
-   */
-  private getFieldLabel(fieldName: string): string {
-    const labels: { [key: string]: string } = {
-      name: 'Nombre',
-      description: 'Descripción',
-      sku: 'SKU',
-      brand: 'Marca',
-      categoryId: 'Categoría',
-      supplierId: 'Proveedor',
-      price: 'Precio',
-      stock: 'Stock',
-      batchNumber: 'Número de Lote',
-      supplierSku: 'SKU del Proveedor'
-    };
-
-    return labels[fieldName] || fieldName;
-  }
-
-  /**
-   * Generar SKU automáticamente
-   */
-  generateSku(): void {
-    const name = this.pf['name'].value;
-    const brand = this.pf['brand'].value;
-
-    if (name && brand) {
-      const timestamp = Date.now().toString().slice(-6);
-      const sku = `${brand.slice(0, 3).toUpperCase()}-${name.slice(0, 3).toUpperCase()}-${timestamp}`;
-      this.pf['sku'].setValue(sku);
-    }
-  }
-
-  /**
-   * Agregar proveedor al producto
-   */
-  addSupplier(): void {
-    if (this.supplierForm.invalid) {
-      Object.keys(this.supplierForm.controls).forEach(key => {
-        this.supplierForm.get(key)?.markAsTouched();
-      });
-      return;
-    }
-
-    const supplierData = this.supplierForm.value;
-    const supplier = this.suppliers.find(s => s.id === supplierData.supplierId);
-
-    if (!supplier) return;
-
-    // Verificar si el proveedor ya está agregado
-    const exists = this.productSuppliers.some(ps => ps.supplierId === supplierData.supplierId);
-    if (exists) {
-      this.notificationService.warning('Proveedor duplicado', 'Este proveedor ya está agregado al producto');
-      return;
-    }
-
-    // Crear objeto de proveedor para mostrar en la tabla
-    const newProductSupplier: ProductSupplier = {
-      id: 0, // Temporal, se asignará cuando se guarde
-      productId: this.productId || 0,
-      supplierId: supplierData.supplierId,
-      supplierName: supplier.name,
-      price: supplierData.price,
-      stock: supplierData.stock,
-      batchNumber: supplierData.batchNumber,
-      supplierSku: supplierData.supplierSku,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    this.productSuppliers.push(newProductSupplier);
-    this.supplierForm.reset();
-
-    this.notificationService.success('Proveedor agregado', `${supplier.name} ha sido agregado al producto`);
-  }
-
-  /**
-   * Remover proveedor del producto
-   */
-  removeSupplier(index: number): void {
-    const supplier = this.productSuppliers[index];
-    this.productSuppliers.splice(index, 1);
-    this.notificationService.success('Proveedor removido', `${supplier.supplierName} ha sido removido del producto`);
-  }
-
-  /**
-   * Obtener nombre del proveedor por ID
-   */
-  getSupplierName(supplierId: number): string {
-    const supplier = this.suppliers.find(s => s.id === supplierId);
-    return supplier ? supplier.name : 'Desconocido';
-  }
-
-  /**
-   * Guardar producto
-   */
-  save(): void {
+  onSubmit(): void {
     if (this.productForm.invalid) {
-      Object.keys(this.productForm.controls).forEach(key => {
-        this.productForm.get(key)?.markAsTouched();
-      });
-      return;
-    }
-
-    if (this.productSuppliers.length === 0) {
-      this.notificationService.warning('Proveedores requeridos', 'Debes agregar al menos un proveedor al producto');
+      this.markFormGroupTouched();
       return;
     }
 
     this.isSaving = true;
+    const formValue = this.productForm.value;
 
     if (this.isEditMode) {
-      this.updateProduct();
+      this.updateProduct(formValue);
     } else {
-      this.createProduct();
+      this.createProduct(formValue);
     }
   }
 
-  /**
-   * Crear nuevo producto
-   */
- private createProduct(): void {
-  const productData: CreateProductRequest = {
-    name: this.pf['name'].value,
-    description: this.pf['description'].value,
-    sku: this.pf['sku'].value,
-    brand: this.pf['brand'].value,
-    categoryId: this.pf['categoryId'].value,
-    imageUrl: this.pf['imageUrl'].value
-  };
-
-  this.isSaving = true;
-
-  this.productService.createProduct(productData).subscribe({
-    next: (response) => {
-      if (response.success) {
-        this.notificationService.success('Producto creado', `${response.data.name} ha sido creado exitosamente`);
-        this.router.navigate(['/products']);
-      } else {
-        this.notificationService.error('Error', response.message || 'No se pudo crear el producto');
-      }
-    },
-    error: () => {
-      this.notificationService.error('Error', 'No se pudo crear el producto');
-    },
-    complete: () => {
-      this.isSaving = false;
-    }
-  });
-}
-
-
-  /**
-   * Actualizar producto existente
-   */
-  private updateProduct(): void {
-    if (!this.productId) return;
-
-    const productData: UpdateProductRequest = {
-      name: this.pf['name'].value,
-      description: this.pf['description'].value,
-      sku: this.pf['sku'].value,
-      brand: this.pf['brand'].value,
-      categoryId: this.pf['categoryId'].value,
-      imageUrl: this.pf['imageUrl'].value,
-      isActive: this.pf['isActive'].value
+  private createProduct(formValue: any): void {
+    const request: CreateProductRequest = {
+      name: formValue.name,
+      description: formValue.description,
+      sku: formValue.sku,
+      brand: formValue.brand,
+      categoryId: formValue.categoryId,
+      imageUrl: formValue.imageUrl
     };
 
-    this.productService.updateProduct(this.productId, productData).subscribe({
+    this.productService.createProduct(request).subscribe({
       next: (response) => {
         if (response.success) {
-          this.notificationService.success('Producto actualizado', `${productData.name} ha sido actualizado exitosamente`);
-          this.router.navigate(['/products']);
+          this.notificationService.success('Éxito', 'Producto creado correctamente');
+          this.goBack();
         } else {
-          this.notificationService.error('Error', response.message || 'No se pudo actualizar el producto');
+          this.notificationService.error('Error', 'No se pudo crear el producto');
         }
         this.isSaving = false;
       },
       error: (error) => {
-        this.notificationService.error('Error', 'No se pudo actualizar el producto');
+        console.error('Error creating product:', error);
+        this.notificationService.error('Error', 'Error al crear el producto');
         this.isSaving = false;
       }
     });
   }
 
-  /**
-   * Cancelar y volver
-   */
-  cancel(): void {
+  private updateProduct(formValue: any): void {
+    if (!this.productId) return;
+
+    const request: UpdateProductRequest = {
+      name: formValue.name,
+      description: formValue.description,
+      sku: formValue.sku,
+      brand: formValue.brand,
+      categoryId: formValue.categoryId,
+      imageUrl: formValue.imageUrl,
+      isActive: formValue.isActive
+    };
+
+    this.productService.updateProduct(this.productId, request).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.notificationService.success('Éxito', 'Producto actualizado correctamente');
+          this.goBack();
+        } else {
+          this.notificationService.error('Error', 'No se pudo actualizar el producto');
+        }
+        this.isSaving = false;
+      },
+      error: (error) => {
+        console.error('Error updating product:', error);
+        this.notificationService.error('Error', 'Error al actualizar el producto');
+        this.isSaving = false;
+      }
+    });
+  }
+
+  private markFormGroupTouched(): void {
+    Object.keys(this.productForm.controls).forEach(key => {
+      const control = this.productForm.get(key);
+      control?.markAsTouched();
+    });
+  }
+
+  goBack(): void {
     this.router.navigate(['/products']);
+  }
+
+  getErrorMessage(fieldName: string): string {
+    const control = this.productForm.get(fieldName);
+    if (!control?.errors || !control.touched) return '';
+
+    const errors = control.errors;
+
+    if (errors['required']) return `${this.getFieldDisplayName(fieldName)} es requerido`;
+    if (errors['maxlength']) return `${this.getFieldDisplayName(fieldName)} excede la longitud máxima`;
+    if (errors['email']) return 'Email inválido';
+
+    return 'Campo inválido';
+  }
+
+  private getFieldDisplayName(fieldName: string): string {
+    const displayNames: { [key: string]: string } = {
+      name: 'Nombre',
+      description: 'Descripción',
+      sku: 'SKU',
+      brand: 'Marca',
+      categoryId: 'Categoría',
+      imageUrl: 'URL de imagen'
+    };
+    return displayNames[fieldName] || fieldName;
+  }
+
+  get pageTitle(): string {
+    return this.isEditMode ? 'Editar Producto' : 'Crear Producto';
+  }
+
+  get submitButtonText(): string {
+    if (this.isSaving) return this.isEditMode ? 'Actualizando...' : 'Creando...';
+    return this.isEditMode ? 'Actualizar' : 'Crear';
   }
 }

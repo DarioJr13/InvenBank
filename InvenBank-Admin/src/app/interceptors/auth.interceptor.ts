@@ -1,73 +1,42 @@
-import { Injectable } from '@angular/core';
-import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError, BehaviorSubject } from 'rxjs';
-import { catchError, filter, take, switchMap } from 'rxjs/operators';
-import { AuthService } from '../services/auth.service';
+import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpRequest, HttpHandlerFn, HttpEvent } from '@angular/common/http';
+import { Observable, catchError, throwError } from 'rxjs';
+import { JwtHelperService } from '@auth0/angular-jwt';
 
-@Injectable()
-export class AuthInterceptor implements HttpInterceptor {
-  private isRefreshing = false;
-  private refreshTokenSubject: BehaviorSubject<any> = new BehaviorSubject<any>(null);
+const jwtHelper = new JwtHelperService();
 
-  constructor(private authService: AuthService) {}
+export const AuthInterceptor: HttpInterceptorFn = (
+  req: HttpRequest<unknown>,
+  next: HttpHandlerFn
+): Observable<HttpEvent<unknown>> => {
+  let token = localStorage.getItem('access_token');
 
-  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    // Agregar token JWT si está disponible
-    const token = this.authService.getToken();
-
-    if (token) {
-      req = this.addTokenHeader(req, token);
+  // ⚠️ Validar expiración antes de enviar
+  if (token) {
+    if (jwtHelper.isTokenExpired(token)) {
+      console.warn('[AuthInterceptor] Token expirado. Cerrando sesión...');
+      localStorage.clear();
+      window.location.href = '/login';  // ⛔ Cierra sesión y redirige
+      return throwError(() => new Error('Token expirado. Redirigiendo...'));
     }
 
-    return next.handle(req).pipe(
-      catchError(error => {
-        if (error instanceof HttpErrorResponse && error.status === 401) {
-          return this.handle401Error(req, next);
-        } else {
-          return throwError(error);
-        }
-      })
-    );
-  }
-
-  /**
-   * Agregar header de autorización con JWT
-   */
-  private addTokenHeader(request: HttpRequest<any>, token: string): HttpRequest<any> {
-    return request.clone({
-      headers: request.headers.set('Authorization', `Bearer ${token}`)
+    req = req.clone({
+      setHeaders: {
+        Authorization: `Bearer ${token}`
+      }
     });
   }
 
-  /**
-   * Manejar error 401 (token expirado)
-   */
-  private handle401Error(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    if (!this.isRefreshing) {
-      this.isRefreshing = true;
-      this.refreshTokenSubject.next(null);
+  return next(req).pipe(
+    catchError(error => {
+      // 👀 Manejo adicional si el backend responde 401 por token vencido
+      if (error?.status === 401 && jwtHelper.isTokenExpired(token || '')) {
+        console.warn('[AuthInterceptor] Expiración detectada en respuesta. Cerrando sesión...');
+        localStorage.clear();
+        window.location.href = '/login';
+      }
 
-      return this.authService.refreshToken().pipe(
-        switchMap((response: any) => {
-          this.isRefreshing = false;
-          const newToken = response.data.token;
-          this.refreshTokenSubject.next(newToken);
-          return next.handle(this.addTokenHeader(request, newToken));
-        }),
-        catchError(error => {
-          this.isRefreshing = false;
-          this.authService.logout();
-          return throwError(error);
-        })
-      );
-    } else {
-      return this.refreshTokenSubject.pipe(
-        filter(token => token != null),
-        take(1),
-        switchMap(jwt => {
-          return next.handle(this.addTokenHeader(request, jwt));
-        })
-      );
-    }
-  }
-}
+      return throwError(() => error);
+    })
+  );
+};
