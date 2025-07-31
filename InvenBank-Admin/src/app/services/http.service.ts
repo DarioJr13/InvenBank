@@ -20,22 +20,26 @@ export class HttpService {
   /**
    * GET request genérico
    */
-  get<T>(endpoint: string, params?: any): Observable<T> {
-    let httpParams = new HttpParams();
+ get<T>(endpoint: string, params?: any): Observable<T> {
+  let httpParams = new HttpParams();
 
-    if (params) {
-      Object.keys(params).forEach(key => {
-        if (params[key] !== null && params[key] !== undefined) {
-          httpParams = httpParams.set(key, params[key].toString());
-        }
-      });
-    }
-
-    return this.http.get<T>(`${this.apiUrl}${endpoint}`, { params: httpParams })
-      .pipe(
-        catchError(this.handleError)
-      );
+  if (params) {
+    Object.keys(params).forEach(key => {
+      if (params[key] !== null && params[key] !== undefined) {
+        httpParams = httpParams.set(key, params[key].toString());
+      }
+    });
   }
+
+  // DEBUG: Verificar si interceptor funciona
+  console.log('Making request to:', `${this.apiUrl}${endpoint}`);
+  console.log('Token exists:', !!localStorage.getItem('access_token'));
+
+  return this.http.get<T>(`${this.apiUrl}${endpoint}`, { params: httpParams })
+    .pipe(
+      catchError(this.handleError)
+    );
+}
 
   /**
    * POST request genérico
