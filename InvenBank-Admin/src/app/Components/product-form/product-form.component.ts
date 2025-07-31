@@ -100,9 +100,7 @@ export class ProductFormComponent implements OnInit {
   private loadCategories(): void {
     this.categoryService.getAllCategories().subscribe({
       next: (response) => {
-        if (response.success) {
-          this.categories = response.data.filter(c => c.isActive);
-        }
+       this.categories = response.filter((c: any) => c.isActive);
       },
       error: (error) => {
         this.notificationService.error('Error', 'No se pudieron cargar las categorías');
@@ -116,9 +114,7 @@ export class ProductFormComponent implements OnInit {
   private loadSuppliers(): void {
     this.supplierService.getAllSuppliers().subscribe({
       next: (response) => {
-        if (response.success) {
-          this.suppliers = response.data.filter(s => s.isActive);
-        }
+        this.suppliers = response.filter((c: any) => c.isActive);
       },
       error: (error) => {
         this.notificationService.error('Error', 'No se pudieron cargar los proveedores');
@@ -134,7 +130,7 @@ export class ProductFormComponent implements OnInit {
 
     this.isLoading = true;
 
-    this.productService.getProductById(this.productId).subscribe({
+    this.productService.getProduct(this.productId).subscribe({
       next: (response) => {
         if (response.success) {
           this.product = response.data;
@@ -340,32 +336,36 @@ export class ProductFormComponent implements OnInit {
   /**
    * Crear nuevo producto
    */
-  private createProduct(): void {
-    const productData: CreateProductRequest = {
-      name: this.pf['name'].value,
-      description: this.pf['description'].value,
-      sku: this.pf['sku'].value,
-      brand: this.pf['brand'].value,
-      categoryId: this.pf['categoryId'].value,
-      imageUrl: this.pf['imageUrl'].value
-    };
+ private createProduct(): void {
+  const productData: CreateProductRequest = {
+    name: this.pf['name'].value,
+    description: this.pf['description'].value,
+    sku: this.pf['sku'].value,
+    brand: this.pf['brand'].value,
+    categoryId: this.pf['categoryId'].value,
+    imageUrl: this.pf['imageUrl'].value
+  };
 
-    this.productService.createProduct(productData).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.notificationService.success('Producto creado', `${productData.name} ha sido creado exitosamente`);
-          this.router.navigate(['/products']);
-        } else {
-          this.notificationService.error('Error', response.message || 'No se pudo crear el producto');
-        }
-        this.isSaving = false;
-      },
-      error: (error) => {
-        this.notificationService.error('Error', 'No se pudo crear el producto');
-        this.isSaving = false;
+  this.isSaving = true;
+
+  this.productService.createProduct(productData).subscribe({
+    next: (response) => {
+      if (response.success) {
+        this.notificationService.success('Producto creado', `${response.data.name} ha sido creado exitosamente`);
+        this.router.navigate(['/products']);
+      } else {
+        this.notificationService.error('Error', response.message || 'No se pudo crear el producto');
       }
-    });
-  }
+    },
+    error: () => {
+      this.notificationService.error('Error', 'No se pudo crear el producto');
+    },
+    complete: () => {
+      this.isSaving = false;
+    }
+  });
+}
+
 
   /**
    * Actualizar producto existente

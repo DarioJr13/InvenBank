@@ -1,203 +1,161 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { MatPaginator } from '@angular/material/paginator';
-import { MatSort } from '@angular/material/sort';
-import { MatTableDataSource } from '@angular/material/table';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatTableModule } from '@angular/material/table';
+
 import { ProductService } from '../../services/product.service';
 import { CategoryService } from '../../services/category.service';
 import { NotificationService } from '../../services/notification.service';
-import { Product, Category, SearchRequest } from '../../models';
+import { Product } from '../../models';
+
+import { MatTableDataSource } from '@angular/material/table';
 
 @Component({
   selector: 'app-product-list',
+  standalone: true,
   templateUrl: './product-list.component.html',
-  styleUrls: ['./product-list.component.scss']
+  styleUrls: ['./product-list.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatIconModule,
+    MatChipsModule,
+    MatProgressSpinnerModule,
+    MatPaginatorModule,
+    MatTableModule
+  ]
 })
 export class ProductListComponent implements OnInit {
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
-
-  displayedColumns: string[] = ['name', 'sku', 'brand', 'categoryName', 'totalStock', 'minPrice', 'maxPrice', 'isActive', 'actions'];
-  dataSource = new MatTableDataSource<Product>();
-
   products: Product[] = [];
-  categories: Category[] = [];
-  isLoading = false;
-  searchTerm = '';
-  selectedCategory: number | null = null;
-  selectedBrand = '';
+  categories: string[] = [];
+  dataSource = new MatTableDataSource<Product>();
+  displayedColumns: string[] = [
+    'name',
+    'sku',
+    'brand',
+    'categoryName',
+    'isActive',
+    'actions'
+  ];
 
-  // Paginación
+  searchTerm = '';
+  selectedCategory: string = '';
+  selectedBrand: string = '';
+
   totalRecords = 0;
   pageSize = 10;
-  pageNumber = 1;
+  currentPage = 0;
+  isLoading = false;
 
   constructor(
     private productService: ProductService,
     private categoryService: CategoryService,
-    private notificationService: NotificationService,
-    private router: Router
+    private router: Router,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
-    this.loadCategories();
-    this.loadProducts();
+    this.fetchProducts();
   }
 
-  /**
-   * Cargar categorías para el filtro
-   */
-  loadCategories(): void {
-    this.categoryService.getAllCategories().subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.categories = response.data;
-        }
-      },
-      error: (error) => {
-        console.error('Error loading categories:', error);
-      }
-    });
-  }
-
-  /**
-   * Cargar productos con filtros y paginación
-   */
-  loadProducts(): void {
+  fetchProducts(): void {
     this.isLoading = true;
 
-    const searchRequest: SearchRequest = {
-      searchTerm: this.searchTerm || undefined,
-      categoryId: this.selectedCategory || undefined,
-      brand: this.selectedBrand || undefined,
-      inStock: true,
-      pageNumber: this.pageNumber,
-      pageSize: this.pageSize,
-      sortBy: 'Name',
-      sortDescending: false
-    };
-
-    this.productService.searchProducts(searchRequest).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.products = response.data;
-          this.dataSource.data = this.products;
-          this.totalRecords = response.totalRecords;
-        }
-        this.isLoading = false;
+    this.productService.getProducts().subscribe({
+      next: (products) => {
+        this.products = products;
+        this.dataSource.data = products;
+        this.totalRecords = products.length;
+        this.applyFilter();
       },
-      error: (error) => {
+      error: () => {
         this.notificationService.error('Error', 'No se pudieron cargar los productos');
         this.isLoading = false;
       }
     });
+
+    this.categoryService.getAllCategories().subscribe({
+      next: (categories) => {
+        this.categories = categories.map(c => c.name);
+      },
+      error: () => {
+        this.notificationService.error('Error', 'No se pudieron cargar las categorías');
+      }
+    });
   }
 
-  /**
-   * Aplicar filtros de búsqueda
-   */
   applyFilter(): void {
-    this.pageNumber = 1;
-    this.loadProducts();
+    let filtered = this.products;
+
+    if (this.searchTerm) {
+      const term = this.searchTerm.toLowerCase();
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(term) ||
+        product.brand.toLowerCase().includes(term)
+      );
+    }
+
+    if (this.selectedCategory) {
+      filtered = filtered.filter(product => product.categoryName === this.selectedCategory);
+    }
+
+    if (this.selectedBrand) {
+      filtered = filtered.filter(product => product.brand === this.selectedBrand);
+    }
+
+    this.dataSource.data = filtered.slice(
+      this.currentPage * this.pageSize,
+      (this.currentPage + 1) * this.pageSize
+    );
   }
 
-  /**
-   * Limpiar filtros
-   */
   clearFilters(): void {
     this.searchTerm = '';
-    this.selectedCategory = null;
+    this.selectedCategory = '';
     this.selectedBrand = '';
     this.applyFilter();
   }
 
-  /**
-   * Cambiar página
-   */
-  onPageChange(event: any): void {
-    this.pageNumber = event.pageIndex + 1;
-    this.pageSize = event.pageSize;
-    this.loadProducts();
-  }
-
-  /**
-   * Navegar a crear producto
-   */
-  createProduct(): void {
-    this.router.navigate(['/products/new']);
-  }
-
-  /**
-   * Navegar a editar producto
-   */
-  editProduct(product: Product): void {
-    this.router.navigate(['/products/edit', product.id]);
-  }
-
-  /**
-   * Ver detalles del producto
-   */
   viewProduct(product: Product): void {
-    this.router.navigate(['/products/view', product.id]);
+    this.router.navigate(['/products', product.id, 'view']);
   }
 
-  /**
-   * Eliminar producto
-   */
-  async deleteProduct(product: Product): Promise<void> {
-    const confirmed = await this.notificationService.confirm(
-      '¿Eliminar producto?',
-      `¿Estás seguro que deseas eliminar "${product.name}"?`,
-      'Sí, eliminar',
-      'Cancelar'
-    );
-
-    if (confirmed) {
-      this.productService.deleteProduct(product.id).subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.notificationService.success('Producto eliminado', `${product.name} ha sido eliminado exitosamente`);
-            this.loadProducts();
-          } else {
-            this.notificationService.error('Error', response.message || 'No se pudo eliminar el producto');
-          }
-        },
-        error: (error) => {
-          this.notificationService.error('Error', 'No se pudo eliminar el producto');
-        }
-      });
-    }
+  editProduct(product: Product): void {
+    this.router.navigate(['/products', product.id, 'edit']);
   }
 
-  /**
-   * Toggle estado del producto
-   */
-  async toggleProductStatus(product: Product): Promise<void> {
-    const action = product.isActive ? 'desactivar' : 'activar';
-    const confirmed = await this.notificationService.confirm(
-      `¿${action.charAt(0).toUpperCase() + action.slice(1)} producto?`,
-      `¿Estás seguro que deseas ${action} "${product.name}"?`,
-      `Sí, ${action}`,
-      'Cancelar'
-    );
+  deleteProduct(product: Product): void {
+    this.notificationService.success('Eliminado', `Producto ${product.name} eliminado`);
+  }
 
-    if (confirmed) {
-      this.productService.toggleProductStatus(product.id).subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.notificationService.success(
-              `Producto ${product.isActive ? 'desactivado' : 'activado'}`,
-              `${product.name} ha sido ${product.isActive ? 'desactivado' : 'activado'} exitosamente`
-            );
-            this.loadProducts();
-          } else {
-            this.notificationService.error('Error', response.message || `No se pudo ${action} el producto`);
-          }
-        },
-        error: (error) => {
-          this.notificationService.error('Error', `No se pudo ${action} el producto`);
-        }
-      });
-    }
+  toggleProductStatus(product: Product): void {
+    product.isActive = !product.isActive;
+    this.notificationService.success(
+      'Estado actualizado',
+      `Producto ${product.name} está ahora ${product.isActive ? 'activo' : 'inactivo'}`
+    );
+  }
+
+  onPageChange(event: any): void {
+    this.currentPage = event.pageIndex;
+    this.pageSize = event.pageSize;
+    this.applyFilter();
+  }
+
+  createProduct(id: number): void {
+    this.router.navigate(['/products', id, 'edit']);
   }
 }

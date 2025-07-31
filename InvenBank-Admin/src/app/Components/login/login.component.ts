@@ -1,14 +1,34 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatCardModule } from '@angular/material/card';
+
 import { AuthService } from '../../services/auth.service';
 import { NotificationService } from '../../services/notification.service';
 import { LoadingService } from '../../services/loading.service';
 
 @Component({
+  standalone: true,
   selector: 'app-login',
   templateUrl: './login.component.html',
-  styleUrls: ['./login.component.scss']
+  styleUrls: ['./login.component.scss'],
+  imports: [
+    CommonModule,
+    RouterModule,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatCardModule
+  ]
 })
 export class LoginComponent implements OnInit {
   loginForm: FormGroup;
@@ -31,33 +51,22 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Obtener URL de retorno de los query params
-    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || this.returnUrl;
+    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
 
-    // Si ya está autenticado, redirigir
     if (this.authService.isAuthenticated()) {
-      this.router.navigate([this.returnUrl]);
+      this.router.navigateByUrl(this.returnUrl);
     }
   }
 
-  /**
-   * Obtener control del formulario
-   */
   get f() {
     return this.loginForm.controls;
   }
 
-  /**
-   * Verificar si un campo tiene errores
-   */
   hasError(fieldName: string, errorType: string): boolean {
     const field = this.loginForm.get(fieldName);
     return field ? field.hasError(errorType) && (field.dirty || field.touched) : false;
   }
 
-  /**
-   * Obtener mensaje de error para un campo
-   */
   getErrorMessage(fieldName: string): string {
     const field = this.loginForm.get(fieldName);
 
@@ -76,12 +85,8 @@ export class LoginComponent implements OnInit {
     return '';
   }
 
-  /**
-   * Enviar formulario de login
-   */
   onSubmit(): void {
     if (this.loginForm.invalid) {
-      // Marcar todos los campos como tocados para mostrar errores
       Object.keys(this.loginForm.controls).forEach(key => {
         this.loginForm.get(key)?.markAsTouched();
       });
@@ -90,43 +95,37 @@ export class LoginComponent implements OnInit {
 
     this.isLoading = true;
 
-    const loginData = {
-      email: this.f['email'].value,
-      password: this.f['password'].value
-    };
+    const { email, password } = this.loginForm.value;
 
-    this.authService.login(loginData).subscribe({
-      next: (response) => {
+    this.authService.login({ email, password }).subscribe({
+      next: (res) => {
         this.isLoading = false;
 
-        if (response.success) {
+        if (res.success && res.data?.token) {
           this.notificationService.success(
             '¡Bienvenido!',
-            `Hola ${response.data.user.firstName}, has iniciado sesión exitosamente`
+            `Hola ${res.data.user?.firstName || 'usuario'}, has iniciado sesión exitosamente`
           );
 
-          // Redirigir a la URL solicitada o al dashboard
-          this.router.navigate([this.returnUrl]);
+          this.router.navigateByUrl(this.returnUrl);
         } else {
           this.notificationService.error(
             'Error de autenticación',
-            response.message || 'Credenciales inválidas'
+            res.message || 'Credenciales inválidas'
           );
         }
       },
       error: (error) => {
         this.isLoading = false;
+        console.error('❌ Error en login:', error);
         this.notificationService.error(
           'Error de conexión',
-          error || 'No se pudo conectar con el servidor'
+          error?.error?.message || 'No se pudo conectar con el servidor'
         );
       }
     });
   }
 
-  /**
-   * Toggle visibilidad de contraseña
-   */
   togglePasswordVisibility(): void {
     this.hidePassword = !this.hidePassword;
   }

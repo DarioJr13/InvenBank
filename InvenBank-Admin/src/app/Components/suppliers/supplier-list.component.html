@@ -1,1 +1,48 @@
-<p>supplier-list works!</p>
+<div class="supplier-header">
+  <div class="title-section">
+    <h1>📦 Proveedores</h1>
+    <p>Listado de proveedores registrados en el sistema</p>
+  </div>
+  <button mat-raised-button color="primary" routerLink="/suppliers/new">
+    <mat-icon>add</mat-icon> Nuevo proveedor
+  </button>
+</div>
+
+<mat-progress-spinner *ngIf="isLoading" mode="indeterminate" diameter="50"></mat-progress-spinner>
+
+<div *ngIf="!isLoading && suppliers.length === 0" class="no-suppliers">
+  <mat-icon>sentiment_dissatisfied</mat-icon>
+  <p>No hay proveedores registrados aún.</p>
+</div>
+
+<div class="supplier-grid" *ngIf="!isLoading && suppliers.length > 0">
+  <mat-card *ngFor="let supplier of suppliers" class="supplier-card" appearance="outlined">
+    <mat-card-header>
+      <mat-card-title>{{ supplier.name }}</mat-card-title>
+      <mat-card-subtitle>{{ supplier.contactName }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="info-row"><mat-icon>email</mat-icon>{{ supplier.email }}</div>
+      <div class="info-row"><mat-icon>phone</mat-icon>{{ supplier.phone }}</div>
+      <div class="info-row"><mat-icon>location_on</mat-icon>{{ supplier.city }}, {{ supplier.country }}</div>
+      <div class="stat-group">
+        <div class="stat">
+          <span class="label">Productos</span>
+          <span class="value">{{ supplier.productsCount }}</span>
+        </div>
+        <div class="stat">
+          <span class="label">Stock total</span>
+          <span class="value">{{ supplier.totalStock }}</span>
+        </div>
+      </div>
+    </mat-card-content>
+    <mat-card-actions align="end">
+      <button mat-icon-button color="primary" aria-label="Editar">
+        <mat-icon>edit</mat-icon>
+      </button>
+      <button mat-icon-button color="warn" aria-label="Eliminar">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>
