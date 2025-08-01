@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Dapper;
 using System.Data;
+using System.Text.Json;
 
 namespace InvenBank.API.Controllers.Mobile;
 
@@ -37,19 +38,19 @@ public class WishlistController : ControllerBase
                     w.Id AS WishlistId,
                     p.Id AS ProductId,
                     p.Name AS ProductName,
-                    p.Description,
-                    p.ImageUrl,
+                    cast(p.Description as varchar(max)) as Description,
+                    cast(p.ImageUrl as varchar(max)) as ImageUrl,
                     c.Name AS Category,
                     MIN(ps.Price) AS MinPrice,
                     SUM(ps.Stock) AS TotalStock,
-                    w.CreatedAt
+                    w.AddedDate
                 FROM Wishlists w
                 INNER JOIN Products p ON w.ProductId = p.Id
                 INNER JOIN Categories c ON p.CategoryId = c.Id
                 INNER JOIN ProductSuppliers ps ON p.Id = ps.ProductId
                 WHERE w.UserId = @UserId AND p.IsActive = 1
-                GROUP BY w.Id, p.Id, p.Name, p.Description, p.ImageUrl, c.Name, w.CreatedAt
-                ORDER BY w.CreatedAt DESC";
+                GROUP BY w.Id, p.Id, p.Name, cast(p.Description as varchar(max)), cast(p.ImageUrl as varchar(max)), c.Name, w.AddedDate
+                ORDER BY w.AddedDate DESC";
 
             var wishlist = await _connection.QueryAsync(sql, new { UserId = userId });
 
@@ -75,12 +76,12 @@ public class WishlistController : ControllerBase
 
             // Parsear productId del request
             var json = System.Text.Json.JsonSerializer.Serialize(request);
-            var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+            var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
             if (!data.ContainsKey("productId"))
                 return BadRequest(ApiResponse<object>.ErrorResult("ProductId requerido"));
 
-            var productId = Convert.ToInt32(data["productId"]);
+            var productId = data["productId"].GetInt32();
 
             // Verificar si ya existe
             var existsSql = "SELECT COUNT(1) FROM Wishlists WHERE UserId = @UserId AND ProductId = @ProductId";
@@ -92,7 +93,7 @@ public class WishlistController : ControllerBase
 
             // Agregar
             var insertSql = @"
-                INSERT INTO Wishlists (UserId, ProductId, CreatedAt)
+                INSERT INTO Wishlists (UserId, ProductId, AddedDate)
                 VALUES (@UserId, @ProductId, @CreatedAt)";
 
             await _connection.ExecuteAsync(insertSql, new

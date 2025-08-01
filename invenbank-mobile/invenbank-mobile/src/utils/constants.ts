@@ -4,24 +4,33 @@ export const ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login',
   },
-  PRODUCTS: {
-    SEARCH: '/products/search',
-    DETAIL: '/products',
-    CATEGORIES: '/categories',
+
+  MOBILE: {
+    CATALOG: {
+      SEARCH: '/mobile/Catalog/search',
+      DETAIL: '/mobile/Catalog',
+      CATEGORIES: '/mobile/Catalog/categories',
+    },
+
+    ORDERS: {
+      CREATE: '/mobile/Orders',              // POST para crear orden
+      GET: '/mobile/Orders',                 // GET lista del usuario
+      DETAIL: '/mobile/Orders',              // GET /{id}
+    },
+
+    WISHLIST: {
+      ADD: '/mobile/wishlist',
+      REMOVE: '/mobile/wishlist',
+      GET: '/mobile/wishlist',
+    },
   },
-  WISHLIST: {
-    GET: '/wishlist',
-    ADD: '/wishlist',
-    REMOVE: '/wishlist',
-  },
-  ORDERS: {
-    CREATE: '/orders',
-    GET: '/orders',
-  },
+
   HEALTH: {
     CHECK: '/health',
+    DATABASE: '/health/database',
+    SYSTEM: '/health/system',
   }
-} as const;     
+} as const;
 
 export const STORAGE_KEYS = {
   TOKEN: 'invenbank_token',

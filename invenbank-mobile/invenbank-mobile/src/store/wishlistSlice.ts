@@ -8,36 +8,30 @@ const initialState: WishlistState = {
   error: null,
 };
 
-// Async Thunks
 export const getWishlistAsync = createAsyncThunk(
   'wishlist/get',
-  async (_, { rejectWithValue }) => {
-    try {
-      const items = await wishlistService.getWishlist();
-      return items;
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to get wishlist');
-    }
+  async () => {
+    const response = await wishlistService.get();
+    return response.data;
   }
 );
 
 export const addToWishlistAsync = createAsyncThunk(
   'wishlist/add',
-  async (productId: number, { rejectWithValue }) => {
-    try {
-      await wishlistService.addToWishlist({ productId });
-      return productId;
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to add to wishlist');
-    }
+  async (productId: number) => {
+    const response = await wishlistService.add(productId);
+    return productId;
   }
 );
 
+
 export const removeFromWishlistAsync = createAsyncThunk(
   'wishlist/remove',
-  async (productId: number, { rejectWithValue }) => {
+  async (productId: number, { rejectWithValue, dispatch }) => {
     try {
       await wishlistService.removeFromWishlist(productId);
+      // ✅ Recargar wishlist después de eliminar para sincronización
+      dispatch(getWishlistAsync());
       return productId;
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to remove from wishlist');
@@ -55,7 +49,6 @@ const wishlistSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Get wishlist
       .addCase(getWishlistAsync.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -68,17 +61,12 @@ const wishlistSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-      // Add to wishlist
-      .addCase(addToWishlistAsync.fulfilled, (state) => {
-        // Refrescar la lista después de agregar
-        state.error = null;
-      })
       .addCase(addToWishlistAsync.rejected, (state, action) => {
         state.error = action.payload as string;
       })
-      // Remove from wishlist
       .addCase(removeFromWishlistAsync.fulfilled, (state, action) => {
-        state.items = state.items.filter(item => item.productId !== action.payload);
+        // ✅ Usar ProductId en lugar de productId
+        state.items = state.items.filter(item => item.ProductId !== action.payload);
         state.error = null;
       })
       .addCase(removeFromWishlistAsync.rejected, (state, action) => {

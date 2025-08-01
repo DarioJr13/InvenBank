@@ -2,12 +2,14 @@ import { configureStore } from '@reduxjs/toolkit';
 import authSlice from './authSlice';
 import productsSlice from './productsSlice';
 import wishlistSlice from './wishlistSlice';
+import cartReducer from './cartSlice'; //
 
 export const store = configureStore({
   reducer: {
     auth: authSlice,
     products: productsSlice,
     wishlist: wishlistSlice,
+    cart: cartReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
