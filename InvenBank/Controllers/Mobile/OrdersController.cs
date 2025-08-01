@@ -4,6 +4,7 @@ using InvenBank.API.DTOs.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
+using System.Text.Json;
 
 namespace InvenBank.API.Controllers.Client;
 
@@ -27,114 +28,139 @@ public class OrdersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateOrder([FromBody] object request)
     {
-        using var transaction = _connection.BeginTransaction();
         try
         {
             var userId = GetCurrentUserId();
             if (userId == 0) return Unauthorized();
 
-            var json = System.Text.Json.JsonSerializer.Serialize(request);
-            var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+            // Asegurar que la conexión esté abierta
+            if (_connection.State != ConnectionState.Open)
+                _connection.Open();
 
-            var shippingAddress = data.ContainsKey("shippingAddress") ? data["shippingAddress"]?.ToString() : "";
-            var paymentMethod = data.ContainsKey("paymentMethod") ? data["paymentMethod"]?.ToString() : "";
+            using var transaction = _connection.BeginTransaction();
 
-            if (!data.ContainsKey("items"))
-                return BadRequest(ApiResponse<object>.ErrorResult("Items requeridos"));
-
-            var itemsJson = System.Text.Json.JsonSerializer.Serialize(data["items"]);
-            var items = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object>>>(itemsJson);
-
-            decimal totalAmount = 0;
-
-            // Validar y calcular total
-            foreach (var item in items)
+            try
             {
-                var productId = Convert.ToInt32(item["productId"]);
-                var supplierId = Convert.ToInt32(item["supplierId"]);
-                var quantity = Convert.ToInt32(item["quantity"]);
+                var json = System.Text.Json.JsonSerializer.Serialize(request);
+                var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
-                var productSql = @"
-                    SELECT ps.Price, ps.Stock
-                    FROM ProductSuppliers ps
-                    WHERE ps.ProductId = @ProductId AND ps.SupplierId = @SupplierId 
-                    AND ps.IsActive = 1";
+                var shippingAddress = data.ContainsKey("shippingAddress") ? data["shippingAddress"].GetString() : "";
+                var paymentMethod = data.ContainsKey("paymentMethod") ? data["paymentMethod"].GetString() : "";
 
-                var productInfo = await _connection.QuerySingleOrDefaultAsync<(decimal Price, int Stock)>(
-                    productSql, new { ProductId = productId, SupplierId = supplierId }, transaction);
+                if (!data.ContainsKey("items"))
+                    return BadRequest(ApiResponse<object>.ErrorResult("Items requeridos"));
 
-                if (productInfo.Price == 0)
-                    return BadRequest(ApiResponse<object>.ErrorResult($"Producto {productId} no disponible"));
+                var itemsJson = System.Text.Json.JsonSerializer.Serialize(data["items"]);
+                var items = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(itemsJson);
 
-                if (productInfo.Stock < quantity)
-                    return BadRequest(ApiResponse<object>.ErrorResult($"Stock insuficiente"));
+                decimal totalAmount = 0;
 
-                totalAmount += productInfo.Price * quantity;
-            }
-
-            // Crear orden
-            var orderSql = @"
-                INSERT INTO Orders (UserId, OrderDate, Status, TotalAmount, ShippingAddress, PaymentMethod)
-                OUTPUT INSERTED.Id
-                VALUES (@UserId, @OrderDate, @Status, @TotalAmount, @ShippingAddress, @PaymentMethod)";
-
-            var orderId = await _connection.QuerySingleAsync<int>(orderSql, new
-            {
-                UserId = userId,
-                OrderDate = DateTime.UtcNow,
-                Status = "Pending",
-                TotalAmount = totalAmount,
-                ShippingAddress = shippingAddress,
-                PaymentMethod = paymentMethod
-            }, transaction);
-
-            // Crear detalles y actualizar stock
-            foreach (var item in items)
-            {
-                var productId = Convert.ToInt32(item["productId"]);
-                var supplierId = Convert.ToInt32(item["supplierId"]);
-                var quantity = Convert.ToInt32(item["quantity"]);
-
-                var price = await _connection.QuerySingleAsync<decimal>(
-                    "SELECT Price FROM ProductSuppliers WHERE ProductId = @ProductId AND SupplierId = @SupplierId",
-                    new { ProductId = productId, SupplierId = supplierId }, transaction);
-
-                // Insertar detalle
-                await _connection.ExecuteAsync(@"
-                    INSERT INTO OrderDetails (OrderId, ProductId, SupplierId, Quantity, UnitPrice, Subtotal)
-                    VALUES (@OrderId, @ProductId, @SupplierId, @Quantity, @UnitPrice, @Subtotal)", new
+                // Validar y calcular total
+                foreach (var item in items)
                 {
-                    OrderId = orderId,
-                    ProductId = productId,
-                    SupplierId = supplierId,
-                    Quantity = quantity,
-                    UnitPrice = price,
-                    Subtotal = price * quantity
+                    var productId = item["productId"].GetInt32();
+                    var supplierId = item["supplierId"].GetInt32();
+                    var quantity = item["quantity"].GetInt32();
+
+                    var productSql = @"
+                        SELECT ps.Price, ps.Stock
+                        FROM ProductSuppliers ps
+                        WHERE ps.ProductId = @ProductId AND ps.SupplierId = @SupplierId 
+                        AND ps.IsActive = 1";
+
+                    var productInfo = await _connection.QuerySingleOrDefaultAsync<(decimal Price, int Stock)>(
+                        productSql, new { ProductId = productId, SupplierId = supplierId }, transaction);
+
+                    if (productInfo.Price == 0)
+                        return BadRequest(ApiResponse<object>.ErrorResult($"Producto {productId} no disponible"));
+
+                    if (productInfo.Stock < quantity)
+                        return BadRequest(ApiResponse<object>.ErrorResult($"Stock insuficiente"));
+
+                    totalAmount += productInfo.Price * quantity;
+                }
+
+                // Generar OrderNumber automático único
+                var today = DateTime.Now.ToString("yyyyMMdd");
+                var lastNumber = await _connection.QuerySingleOrDefaultAsync<int?>(@"
+                    SELECT MAX(CAST(RIGHT(OrderNumber, 4) AS INT))
+                    FROM Orders 
+                    WHERE OrderNumber LIKE @Pattern",
+                    new { Pattern = $"ORD-{today}-%" }, transaction);
+
+                var nextNumber = (lastNumber ?? 0) + 1;
+                var orderNumber = $"ORD-{today}-{nextNumber:D4}";
+
+                // Crear orden
+                var orderSql = @"
+                    INSERT INTO Orders (OrderNumber, UserId, OrderDate, Status, TotalAmount, ShippingAddress)
+                    OUTPUT INSERTED.Id
+                    VALUES (@OrderNumber, @UserId, @OrderDate, @Status, @TotalAmount, @ShippingAddress)";
+
+                var orderId = await _connection.QuerySingleAsync<int>(orderSql, new
+                {
+                    OrderNumber = orderNumber,
+                    UserId = userId,
+                    OrderDate = DateTime.UtcNow,
+                    Status = "Pending",
+                    TotalAmount = totalAmount,
+                    ShippingAddress = shippingAddress
                 }, transaction);
 
-                // Actualizar stock
-                await _connection.ExecuteAsync(@"
-                    UPDATE ProductSuppliers 
-                    SET Stock = Stock - @Quantity
-                    WHERE ProductId = @ProductId AND SupplierId = @SupplierId", new
+                // Crear detalles y actualizar stock
+                foreach (var item in items)
                 {
-                    Quantity = quantity,
-                    ProductId = productId,
-                    SupplierId = supplierId
-                }, transaction);
+                    var productId = item["productId"].GetInt32();
+                    var supplierId = item["supplierId"].GetInt32();
+                    var quantity = item["quantity"].GetInt32();
+
+                    // Obtener ProductSupplierId y precio
+                    var productSupplierInfo = await _connection.QuerySingleAsync<(int Id, decimal Price)>(@"
+                        SELECT Id, Price 
+                        FROM ProductSuppliers 
+                        WHERE ProductId = @ProductId AND SupplierId = @SupplierId AND IsActive = 1",
+                        new { ProductId = productId, SupplierId = supplierId }, transaction);
+
+                    // Insertar detalle con estructura correcta (sin TotalPrice - es columna calculada)
+                    await _connection.ExecuteAsync(@"
+                        INSERT INTO OrderDetails (OrderId, ProductSupplierId, Quantity, UnitPrice, CreatedAt)
+                        VALUES (@OrderId, @ProductSupplierId, @Quantity, @UnitPrice, @CreatedAt)", new
+                    {
+                        OrderId = orderId,
+                        ProductSupplierId = productSupplierInfo.Id,
+                        Quantity = quantity,
+                        UnitPrice = productSupplierInfo.Price,
+                        CreatedAt = DateTime.UtcNow
+                    }, transaction);
+
+                    // Actualizar stock
+                    await _connection.ExecuteAsync(@"
+                        UPDATE ProductSuppliers 
+                        SET Stock = Stock - @Quantity
+                        WHERE Id = @ProductSupplierId", new
+                    {
+                        Quantity = quantity,
+                        ProductSupplierId = productSupplierInfo.Id
+                    }, transaction);
+                }
+
+                transaction.Commit();
+
+                return Ok(ApiResponse<object>.SuccessResult(new { orderId, totalAmount }, "Orden creada"));
             }
-
-            transaction.Commit();
-
-            return Ok(ApiResponse<object>.SuccessResult(new { orderId, totalAmount }, "Orden creada"));
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
         catch (Exception ex)
         {
-            transaction.Rollback();
             _logger.LogError(ex, "Error creando orden");
             return StatusCode(500, ApiResponse<object>.ErrorResult("Error interno"));
         }
     }
+
 
     /// <summary>
     /// Obtener órdenes del usuario

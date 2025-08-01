@@ -1,28 +1,19 @@
 import React, { useEffect } from 'react';
 import {
-  IonContent,
-  IonHeader,
-  IonPage,
-  IonTitle,
-  IonToolbar,
-  IonCard,
-  IonCardContent,
-  IonButton,
-  IonIcon,
-  IonSpinner,
-  IonItem,
-  IonLabel,
-  IonBadge
+  IonPage, IonHeader, IonToolbar, IonTitle,
+  IonContent, IonCard, IonCardContent, IonItem,
+  IonLabel, IonBadge, IonSpinner, IonButton, IonIcon
 } from '@ionic/react';
-import { trashOutline, pricetagOutline } from 'ionicons/icons';
-import { useHistory } from 'react-router-dom';
+import { heart, pricetagOutline } from 'ionicons/icons';
 import { useAppDispatch, useAppSelector } from '../hooks/useAppDispatch';
-import { getWishlistAsync, removeFromWishlistAsync } from '../store/wishlistSlice';
+import { getWishlistAsync } from '../store/wishlistSlice';
+import { useHistory } from 'react-router-dom';
 
 const Wishlist: React.FC = () => {
   const dispatch = useAppDispatch();
   const history = useHistory();
-  const { items, loading } = useAppSelector(state => state.wishlist);
+
+  const { items: wishlistItems } = useAppSelector(state => state.wishlist);
   const { isAuthenticated } = useAppSelector(state => state.auth);
 
   useEffect(() => {
@@ -31,16 +22,13 @@ const Wishlist: React.FC = () => {
       return;
     }
     dispatch(getWishlistAsync());
-  }, [isAuthenticated, dispatch, history]);
-
-  const removeFromWishlist = (productId: number) => {
-    dispatch(removeFromWishlistAsync(productId));
-  };
+  }, [dispatch, isAuthenticated, history]);
 
   const formatPrice = (price: number) => {
+    if (!price || isNaN(price)) return '$0.00';
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
-      currency: 'COP'
+      currency: 'COP',
     }).format(price);
   };
 
@@ -48,66 +36,31 @@ const Wishlist: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Productos Favoritos</IonTitle>
+          <IonTitle>Favoritos</IonTitle>
         </IonToolbar>
       </IonHeader>
-      
       <IonContent>
-        {loading && (
+        {wishlistItems.length === 0 && (
           <div style={{ textAlign: 'center', padding: '2rem' }}>
             <IonSpinner />
-            <p>Cargando favoritos...</p>
+            <p>No tienes productos en tu lista de deseos.</p>
           </div>
         )}
 
-        {!loading && items.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <p>No tienes productos favoritos aún</p>
-            <IonButton routerLink="/products" fill="outline">
-              Explorar Productos
-            </IonButton>
-          </div>
-        )}
-
-        {items.map((item) => (
-          <IonCard key={item.id} button onClick={() => history.push(`/products/${item.productId}`)}>
+        {wishlistItems.map((item) => (
+          <IonCard key={item.ProductId} button onClick={() => history.push(`/products/${item.ProductId}`)}>
             <IonCardContent>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: '0 0 0.5rem 0' }}>{item.product.name}</h3>
-                  <p style={{ color: 'gray', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>
-                    {item.product.description}
-                  </p>
-                  
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <IonIcon icon={pricetagOutline} />
-                    <span style={{ fontWeight: 'bold', color: 'var(--ion-color-primary)' }}>
-                      {formatPrice(item.product.minPrice)}
-                      {item.product.minPrice !== item.product.maxPrice && (
-                        <span style={{ fontWeight: 'normal', color: 'gray' }}>
-                          {' - ' + formatPrice(item.product.maxPrice)}
-                        </span>
-                      )}
-                    </span>
+              <IonItem>
+                <IonLabel>
+                  <h3>{item.Name}</h3>
+                  <p>{item.Description}</p>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <IonBadge color="primary">{formatPrice(item.MinPrice)}</IonBadge>
+                    <IonBadge color="medium">{item.Category}</IonBadge>
                   </div>
-
-                  <IonBadge color={item.product.isAvailable ? 'success' : 'danger'}>
-                    Stock: {item.product.totalStock}
-                  </IonBadge>
-                </div>
-
-                <IonButton
-                  fill="clear"
-                  size="small"
-                  color="danger"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeFromWishlist(item.productId);
-                  }}
-                >
-                  <IonIcon icon={trashOutline} />
-                </IonButton>
-              </div>
+                </IonLabel>
+                <IonIcon icon={heart} color="danger" />
+              </IonItem>
             </IonCardContent>
           </IonCard>
         ))}
